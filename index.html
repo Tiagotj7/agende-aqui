@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Agende Aqui</title>
+  <meta name="description" content="Sistema simples para agendamento" />
+  <style>
+    :root{--bg:#f6f8fa;--card:#ffffff;--primary:#0b76ef;--muted:#6b7280}
+    *{box-sizing:border-box;font-family:Inter,system-ui,Segoe UI,Arial,sans-serif}
+    body{margin:0;background:var(--bg);color:#111;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px}
+    .container{width:100%;max-width:900px;background:var(--card);border-radius:12px;box-shadow:0 6px 30px rgba(15,23,42,0.08);overflow:hidden;display:grid;grid-template-columns:1fr 420px}
+    .hero{padding:32px 40px}
+    .hero h1{margin:0 0 8px;font-size:1.5rem}
+    .hero p{margin:0 0 20px;color:var(--muted)}
+    .features{display:grid;gap:12px;grid-template-columns:repeat(2,1fr);margin-top:12px}
+    .feature{background:#f8fafc;padding:10px;border-radius:8px;font-size:0.9rem;color:var(--muted)}
+    form{padding:28px;background:linear-gradient(180deg,rgba(11,118,239,0.03),transparent);display:flex;flex-direction:column;gap:12px}
+    label{font-size:0.85rem;color:var(--muted)}
+    input,select,textarea{width:100%;padding:10px;border:1px solid #e6e9ee;border-radius:8px;font-size:0.95rem}
+    .row{display:flex;gap:12px}
+    .row > *{flex:1}
+    button{background:var(--primary);color:#fff;border:0;padding:12px;border-radius:10px;font-weight:600;cursor:pointer}
+    footer{padding:12px 16px;text-align:center;font-size:0.85rem;color:var(--muted)}
+    @media (max-width:880px){.container{grid-template-columns:1fr;}.hero{order:2}.form-wrap{order:1}}
+  </style>
+</head>
+<body>
+  <main class="container" role="main">
+    <section class="hero" aria-labelledby="title">
+      <h1 id="title">Agende Aqui</h1>
+      <p>Marque seu horário de forma rápida e prática. Preencha os dados abaixo e confirme.</p>
+
+      <div class="features" aria-hidden="true">
+        <div class="feature">Confirmação por e-mail</div>
+        <div class="feature">Horários em tempo real</div>
+        <div class="feature">Cancelamento fácil</div>
+        <div class="feature">Suporte 24/7</div>
+      </div>
+    </section>
+
+    <section class="form-wrap" aria-labelledby="form-title">
+      <form id="schedule-form" autocomplete="on" novalidate>
+        <h2 id="form-title" style="margin:0 0 8px;font-size:1.05rem">Agendamento</h2>
+
+        <label for="name">Nome completo</label>
+        <input id="name" name="name" type="text" required placeholder="Seu nome" />
+
+        <label for="email">E‑mail</label>
+        <input id="email" name="email" type="email" required placeholder="seu@exemplo.com" />
+
+        <label for="phone">Telefone</label>
+        <input id="phone" name="phone" type="tel" inputmode="tel" placeholder="(11) 9 9999-9999" />
+
+        <div class="row">
+          <div>
+            <label for="service">Serviço</label>
+            <select id="service" name="service" required>
+              <option value="">Selecione</option>
+              <option>Consulta rápida</option>
+              <option>Atendimento estendido</option>
+              <option>Retorno</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="date">Data</label>
+            <input id="date" name="date" type="date" required />
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label for="time">Horário</label>
+            <input id="time" name="time" type="time" required />
+          </div>
+          <div>
+            <label for="duration">Duração (min)</label>
+            <select id="duration" name="duration">
+              <option>30</option>
+              <option selected>60</option>
+              <option>90</option>
+            </select>
+          </div>
+        </div>
+
+        <label for="notes">Observações (opcional)</label>
+        <textarea id="notes" name="notes" rows="3" placeholder="Digite informações relevantes"></textarea>
+
+        <button type="submit">Confirmar agendamento</button>
+        <footer>Ao enviar, você receberá confirmação por e‑mail.</footer>
+      </form>
+    </section>
+  </main>
+</body>
+</html>
