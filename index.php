@@ -190,11 +190,12 @@ $flash = get_flash();
                 <td>
                   <a href="index.php?action=edit&id=<?=intval($c['id'])?>">Editar</a>
 
-                  <form method="post" action="index.php?action=toggle" style="display:inline">
+              <!--   <form method="post" action="index.php?action=toggle" style="display:inline">
                     <input type="hidden" name="csrf" value="<?=esc(csrf_token())?>">
                     <input type="hidden" name="id" value="<?=intval($c['id'])?>">
                     <button type="submit"><?= $c['status'] ? 'Desativar' : 'Ativar' ?></button>
                   </form>
+              -->
 
                   <form method="post" action="index.php?action=delete" style="display:inline" onsubmit="return confirm('Excluir?')">
                     <input type="hidden" name="csrf" value="<?=esc(csrf_token())?>">
