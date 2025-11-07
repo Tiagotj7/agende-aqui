@@ -6,38 +6,61 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Função simples para carregar variáveis do .env
-function loadEnv($path) {
+function loadEnvFile(string $path): array {
     if (!file_exists($path)) {
-        exit('Arquivo .env não encontrado.');
+        return [];
     }
-    $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-    foreach ($lines as $line) {
-        if (str_starts_with(trim($line), '#')) continue;
-        list($name, $value) = explode('=', $line, 2);
-        $_ENV[$name] = trim($value);
+    $result = [];
+    foreach (file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
+        $line = trim($line);
+        if ($line === '' || str_starts_with($line, '#')) continue;
+        if (strpos($line, '=') === false) continue;
+        [$name, $value] = array_map('trim', explode('=', $line, 2));
+        $value = trim($value, "\"' \t\n\r\0\x0B");
+        if ($name === '') continue;
+        $result[$name] = $value;
+        $_ENV[$name] = $value;
         putenv("$name=$value");
     }
+    return $result;
 }
 
-// Carrega as variáveis do arquivo .env
-loadEnv(__DIR__ . '/../.env'); // ajuste o caminho se seu db.php estiver em outra pasta
+// tenta localizações seguras (prefira fora do webroot)
+$envPaths = [
+    __DIR__ . '/../.env',   // pai (ex: teste/.env)
+    __DIR__ . '/.env',      // mesmo diretório
+];
 
-// Pega as variáveis do ambiente
-$db_host = $_ENV['DB_HOST'];
-$db_name = $_ENV['DB_NAME'];
-$db_user = $_ENV['DB_USER'];
-$db_pass = $_ENV['DB_PASS'];
+$env = [];
+foreach ($envPaths as $p) {
+    $env = loadEnvFile($p);
+    if (!empty($env)) break;
+}
 
-// Monta a conexão PDO
-$dsn = "mysql:host=$db_host;dbname=$db_name;charset=utf8mb4";
+if (empty($env)) {
+    throw new RuntimeException('.env não encontrado em: ' . implode(', ', $envPaths));
+}
+
+$db_host = $env['DB_HOST'] ?? '127.0.0.1';
+$db_name = $env['DB_NAME'] ?? '';
+$db_user = $env['DB_USER'] ?? 'root';
+$db_pass = $env['DB_PASS'] ?? '';
+$charset = $env['DB_CHARSET'] ?? 'utf8mb4';
+
+if ($db_name === '') {
+    throw new RuntimeException('DB_NAME não definido no .env');
+}
+
+$dsn = "mysql:host={$db_host};dbname={$db_name};charset={$charset}";
 $options = [
     PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+    PDO::ATTR_EMULATE_PREPARES => false,
 ];
 
 try {
     $pdo = new PDO($dsn, $db_user, $db_pass, $options);
 } catch (PDOException $e) {
-    exit('Erro ao conectar ao banco de dados.');
+    // em dev: lance a exceção; em prod: registre e lance genérica
+    throw new RuntimeException('Falha na conexão com o banco. Verifique credenciais e host.');
 }
