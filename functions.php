@@ -136,7 +136,7 @@ function deleteContact($pdo, $id) {
     try {
         $stmt = $pdo->prepare("UPDATE contacts SET status = 0 WHERE id = ?");
         $ok = $stmt->execute([(int)$id]);
-        return ['ok' => (bool)$ok, 'msg' => $ok ? 'Contato desativado (status=0)' : 'Falha ao desativar contato'];
+        return ['ok' => (bool)$ok, 'msg' => $ok ? 'Contato desativado' : 'Falha ao desativar contato'];
     } catch (PDOException $e) {
         log_error("deleteContact PDOException: " . $e->getMessage());
         return ['ok' => false, 'msg' => 'Erro ao desativar: ' . $e->getMessage()];
