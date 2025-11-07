@@ -119,20 +119,15 @@ function updateContact($pdo, $id, $name, $email, $phone, $notes, $status = 1) {
 }
 
 /** Delete (remove) contato */
-function deleteContact(id) {
-  if (!confirm("Tem certeza que deseja excluir este contato?")) return;
-  
-  fetch("functions.php?action=delete&id=" + id)
-    .then(res => res.json())
-    .then(data => {
-      alert(data.msg);
-      if (data.ok) {
-        loadContacts(); // Recarrega a lista filtrando status=1
-      }
-    })
-    .catch(err => console.error(err));
+function deleteContact($pdo, $id) {
+    try {
+        $stmt = $pdo->prepare("UPDATE contacts SET status = 0 WHERE id = ?");
+        $ok = $stmt->execute([(int)$id]);
+        return ['ok' => $ok, 'msg' => $ok ? 'Contato desativado (status=0)' : 'Falha ao desativar contato'];
+    } catch (PDOException $e) {
+        return ['ok' => false, 'msg' => 'Erro: ' . $e->getMessage()];
+    }
 }
-
 
 
 
