@@ -37,10 +37,10 @@ if (!is_array($dbcfg)) {
     throw new RuntimeException('Configuração "db" ausente em config.php');
 }
 
-$db_host = $dbcfg['host'] ?? '127.0.0.1';
-$db_name = $dbcfg['name'] ?? '';
-$db_user = $dbcfg['user'] ?? 'root';
-$db_pass = $dbcfg['pass'] ?? '';
+$db_host = $dbcfg['host'] ?? 'sql212.infinityfree.com';
+$db_name = $dbcfg['name'] ?? 'if0_40352073_db_agendeaqui';
+$db_user = $dbcfg['user'] ?? 'epiz_40352073';
+$db_pass = $dbcfg['pass'] ?? 'xldkrDW2IYPMMuH';
 $charset = $dbcfg['charset'] ?? 'utf8mb4';
 
 if ($db_name === '') {
