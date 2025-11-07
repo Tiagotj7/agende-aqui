@@ -119,17 +119,21 @@ function updateContact($pdo, $id, $name, $email, $phone, $notes, $status = 1) {
 }
 
 /** Delete (remove) contato */
-function deleteContact($pdo, $id) {
-    try {
-        // Exclusão lógica: apenas marca status = 0
-        $stmt = $pdo->prepare("UPDATE contacts SET status = 0 WHERE id = ?");
-        $ok = $stmt->execute([(int)$id]);
-        return ['ok' => $ok, 'msg' => $ok ? 'Contato desativado (exclusão lógica)' : 'Falha ao desativar contato'];
-    } catch (PDOException $e) {
-        log_error("deleteContact PDOException: " . $e->getMessage());
-        return ['ok' => false, 'msg' => 'Erro ao desativar: ' . $e->getMessage()];
-    }
+function deleteContact(id) {
+  if (!confirm("Tem certeza que deseja excluir este contato?")) return;
+  
+  fetch("functions.php?action=delete&id=" + id)
+    .then(res => res.json())
+    .then(data => {
+      alert(data.msg);
+      if (data.ok) {
+        loadContacts(); // Recarrega a lista filtrando status=1
+      }
+    })
+    .catch(err => console.error(err));
 }
+
+
 
 
 /** Alterna status entre 0 e 1 */

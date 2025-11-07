@@ -271,8 +271,12 @@ $flash = get_flash();
     </aside>
   </div>
 
-  <p style="margin-top:18px" class="muted small">
-    Se quiser debug em JSON, acesse: <code>index.php?action=add&debug=1</code> (use com POST).
-  </p>
+<select id="filterStatus" onchange="loadContacts()">
+  <option value="1" selected>Ativos</option>
+  <option value="0">Inativos</option>
+  <option value="all">Todos</option>
+</select>
+
+
 </body>
 </html>
