@@ -1,7 +1,7 @@
 <?php
-$db_host = 'sql112.byetcluster.com'; // pegue o hostname certo no painel!
-$db_name = 'epiz_40352073_nomeDoBanco'; // o nome completo do banco
-$db_user = 'epiz_40352073'; // seu user completo
+$db_host = 'sql212.infinityfree.com'; // pegue o hostname certo no painel!
+$db_name = 'if0_40352073_db_agendeaqui'; // o nome completo do banco
+$db_user = 'if0_40352073'; // seu user completo
 $db_pass = 'xldkrDW2IYPMMuH'; // senha definida no painel
 
 try {
