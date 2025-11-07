@@ -8,7 +8,7 @@ $db_pass = 'xldkrDW2IYPMMuH';
 
 // URL base do seu site (sem /final). Ex: https://meusite.infinityfreeapp.com
 // Opcional, facilita redirects. Ajuste conforme necessário.
-define('BASE_URL', 'https://https://agendeaqui.rf.gd/');
+//define('BASE_URL', 'https://https://agendeaqui.rf.gd/');
 
 date_default_timezone_set('America/Sao_Paulo'); // ajuste se quiser
 session_start();
