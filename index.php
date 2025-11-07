@@ -1,6 +1,33 @@
 <?php
-// public/index.php
-require_once __DIR__ . '/../db.php';
+// procura db.php em locais comuns e inclui o primeiro encontrado
+$possible = [
+    __DIR__ . '/../db.php',         // caminho atual usado
+    __DIR__ . '/db.php',            // mesmo diretório
+    __DIR__ . '/../config/db.php',  // possível pasta config
+    __DIR__ . '/config/db.php',
+];
+
+$found = false;
+foreach ($possible as $p) {
+    if (file_exists($p)) {
+        require_once $p;
+        $found = true;
+        break;
+    }
+}
+
+if (!$found) {
+    http_response_code(500);
+    echo 'Erro: arquivo db.php não encontrado. Coloque db.php em um destes caminhos ou atualize o require em index.php:<br>';
+    foreach ($possible as $p) echo htmlspecialchars($p) . '<br>';
+    exit;
+}
+
+// garante session se necessário
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    session_start();
+}
+
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
     exit;
