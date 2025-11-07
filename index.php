@@ -146,6 +146,11 @@ $flash = get_flash();
       font-size: 0.95rem;
     }
 
+    textarea {
+      resize: none;      /* desativa o redimensionamento */
+      overflow: auto;    /* garante que barras de rolagem apareçam se o texto for longo */
+    }
+
     input:focus, textarea:focus, select:focus {
       border-color: var(--primary);
       outline: none;
