@@ -2,16 +2,34 @@
 // index.php
 require_once 'functions.php';
 
-// Leitura segura do parâmetro action
+// debug: se ?debug=1 será retornado JSON com resultado das operações
+$debug = isset($_GET['debug']) && $_GET['debug'] === '1';
+
+// Ler parâmetro action
 $action = $_REQUEST['action'] ?? 'list';
+
+// Função utilitária para saída debug/json
+function respond($arr, $debugMode = false) {
+    if ($debugMode) {
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode($arr, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+}
 
 // Rota: adicionar (POST)
 if ($action === 'add' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Verifica CSRF e método
     if (!csrf_check($_POST['csrf'] ?? '')) {
-        flash('Token CSRF inválido.', 'error');
+        $res = ['ok' => false, 'msg' => 'Token CSRF inválido'];
+        log_error('CSRF inválido em add; token recebido: ' . ($_POST['csrf'] ?? '(vazio)'));
+        if ($debug) respond($res, true);
+        flash($res['msg'], 'error');
         header('Location: index.php');
         exit;
     }
+
+    // Captura e valida campos
     $name  = trim($_POST['name'] ?? '');
     $email = trim($_POST['email'] ?? '');
     $phone = trim($_POST['phone'] ?? '');
@@ -19,19 +37,30 @@ if ($action === 'add' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $status = (isset($_POST['status']) && $_POST['status'] === '0') ? 0 : 1;
 
     if ($name === '') {
-        flash('Nome é obrigatório.', 'error');
+        $res = ['ok' => false, 'msg' => 'O campo nome é obrigatório'];
+        if ($debug) respond($res, true);
+        flash($res['msg'], 'error');
+        header('Location: index.php');
+        exit;
+    }
+
+    // Tenta inserir
+    $result = createContact($pdo, $name, $email, $phone, $notes, $status);
+
+    if ($debug) respond($result, true);
+
+    if ($result['ok']) {
+        flash('Contato adicionado com sucesso.', 'success');
     } else {
-        if (createContact($pdo, $name, $email, $phone, $notes, $status)) {
-            flash('Contato adicionado com sucesso.', 'success');
-        } else {
-            flash('Falha ao adicionar contato.', 'error');
-        }
+        flash('Falha ao adicionar: ' . $result['msg'], 'error');
+        // Também logamos para investigação
+        log_error("Falha em fluxo add: " . $result['msg']);
     }
     header('Location: index.php');
     exit;
 }
 
-// Rota: atualizar (POST)
+// Rota: update (POST)
 if ($action === 'update' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!csrf_check($_POST['csrf'] ?? '')) {
         flash('Token CSRF inválido.', 'error');
@@ -48,17 +77,14 @@ if ($action === 'update' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($id <= 0 || $name === '') {
         flash('Dados inválidos.', 'error');
     } else {
-        if (updateContact($pdo, $id, $name, $email, $phone, $notes, $status)) {
-            flash('Contato atualizado.', 'success');
-        } else {
-            flash('Falha ao atualizar.', 'error');
-        }
+        $r = updateContact($pdo, $id, $name, $email, $phone, $notes, $status);
+        flash($r['msg'], $r['ok'] ? 'success' : 'error');
     }
     header('Location: index.php');
     exit;
 }
 
-// Rota: excluir (POST)
+// Rota: delete (POST)
 if ($action === 'delete' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!csrf_check($_POST['csrf'] ?? '')) {
         flash('Token CSRF inválido.', 'error');
@@ -67,17 +93,14 @@ if ($action === 'delete' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     $id = (int)($_POST['id'] ?? 0);
     if ($id > 0) {
-        if (deleteContact($pdo, $id)) {
-            flash('Contato excluído.', 'success');
-        } else {
-            flash('Falha ao excluir.', 'error');
-        }
+        $r = deleteContact($pdo, $id);
+        flash($r['msg'], $r['ok'] ? 'success' : 'error');
     }
     header('Location: index.php');
     exit;
 }
 
-// Rota: toggle status (POST)
+// Rota: toggle (POST)
 if ($action === 'toggle' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!csrf_check($_POST['csrf'] ?? '')) {
         flash('Token CSRF inválido.', 'error');
@@ -86,207 +109,170 @@ if ($action === 'toggle' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     $id = (int)($_POST['id'] ?? 0);
     if ($id > 0) {
-        if (toggleStatus($pdo, $id)) {
-            flash('Status alterado.', 'success');
-        } else {
-            flash('Falha ao alterar status.', 'error');
-        }
+        $r = toggleStatus($pdo, $id);
+        flash($r['msg'], $r['ok'] ? 'success' : 'error');
     }
     header('Location: index.php');
     exit;
 }
 
-// Mostrar formulário de editar (GET)
+// Mostrar formulário editar (GET)
 $editing = null;
 if ($action === 'edit' && isset($_GET['id'])) {
     $editing = getContact($pdo, (int)$_GET['id']);
     if (!$editing) {
-        flash('Contato não encontrado.', 'error');
+        flash('Contato não encontrado', 'error');
         header('Location: index.php');
         exit;
     }
 }
 
-// LISTAGEM com filtros (GET)
+// Listagem
 $search = trim($_GET['search'] ?? '');
 $statusFilter = isset($_GET['status']) ? $_GET['status'] : null;
 $contacts = getContacts($pdo, $search, $statusFilter);
 
-// Mensagens flash
+// Flash
 $flash = get_flash();
 ?>
 <!doctype html>
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8">
-  <title>Agenda Profissional</title>
+  <title>Agenda - Debug</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <style>
-    /* Estilos simples, limpos e responsivos */
+    /* (estilos reduzidos) */
     body{font-family:Arial,Helvetica,sans-serif;max-width:1100px;margin:20px auto;padding:0 12px;color:#222}
-    header{display:flex;justify-content:space-between;align-items:center;gap:12px}
-    h1{font-size:1.6rem;margin:0}
-    .card{background:#fff;border:1px solid #e5e7eb;padding:14px;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,0.04)}
-    .grid{display:grid;grid-template-columns:1fr 360px;gap:18px}
-    @media(max-width:880px){.grid{grid-template-columns:1fr}}
-    form label{display:block;font-size:0.85rem;margin-top:8px}
-    input,textarea,select{width:100%;padding:8px;border:1px solid #cfcfcf;border-radius:6px;box-sizing:border-box}
-    button{padding:8px 12px;border-radius:6px;border:none;cursor:pointer}
-    .btn-primary{background:#0b74de;color:#fff}
-    .btn-secondary{background:#f3f4f6}
-    table{width:100%;border-collapse:collapse;margin-top:12px}
-    th,td{padding:8px;border-bottom:1px solid #eee;text-align:left}
-    th{background:#fafafa}
-    .muted{color:#6b7280;font-size:0.9rem}
+    .card{background:#fff;border:1px solid #e5e7eb;padding:14px;border-radius:8px}
+    input,textarea,select{width:100%;padding:8px;margin-top:6px}
     .flash{padding:10px;margin-bottom:12px;border-radius:6px}
     .flash.success{background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46}
     .flash.error{background:#fff1f2;border:1px solid #fecaca;color:#981b1b}
-    .actions form{display:inline}
-    .small{font-size:0.85rem}
+    table{width:100%;border-collapse:collapse;margin-top:12px}
+    th,td{padding:8px;border-bottom:1px solid #eee;text-align:left}
   </style>
 </head>
 <body>
-  <header>
-    <h1>Agenda Profissional</h1>
-    <div class="muted">CRUD • Status (ativo/inativo) • Acessível</div>
-  </header>
+  <h1>Agenda (modo debug disponível)</h1>
 
   <?php foreach ($flash as $f): ?>
     <div class="flash <?=esc($f['type'])?>"><?=esc($f['msg'])?></div>
   <?php endforeach; ?>
 
-  <div class="grid" role="main">
-    <!-- Listagem -->
-    <section aria-labelledby="listTitle" class="card" id="list">
-      <h2 id="listTitle">Contatos</h2>
+  <div style="display:flex;gap:18px;align-items:flex-start">
+    <div style="flex:1" class="card">
+      <h2>Contatos</h2>
 
-      <form method="get" action="index.php" aria-label="Filtrar contatos" style="display:flex;gap:8px;flex-wrap:wrap">
-        <input type="search" name="search" placeholder="Pesquisar por nome, e-mail, telefone..." value="<?=esc($search)?>" aria-label="Pesquisar">
-        <select name="status" aria-label="Filtrar por status">
-          <option value="">Todos os status</option>
+      <form method="get" action="index.php" style="display:flex;gap:8px;flex-wrap:wrap">
+        <input type="search" name="search" placeholder="Pesquisar..." value="<?=esc($search)?>">
+        <select name="status">
+          <option value="">Todos</option>
           <option value="1" <?=($statusFilter === '1') ? 'selected' : ''?>>Ativos</option>
           <option value="0" <?=($statusFilter === '0') ? 'selected' : ''?>>Inativos</option>
         </select>
-        <button class="btn-secondary" type="submit">Filtrar</button>
-        <a class="btn-secondary" href="index.php" role="button">Limpar</a>
+        <button type="submit">Filtrar</button>
+        <a href="index.php">Limpar</a>
       </form>
 
       <?php if (count($contacts) === 0): ?>
-        <p class="muted">Nenhum contato encontrado.</p>
+        <p>Nenhum contato.</p>
       <?php else: ?>
-        <table aria-describedby="listTitle">
-          <thead>
-            <tr>
-              <th scope="col">Nome</th>
-              <th scope="col">Email</th>
-              <th scope="col">Telefone</th>
-              <th scope="col">Notas</th>
-              <th scope="col">Status</th>
-              <th scope="col">Criado</th>
-              <th scope="col">Ações</th>
-            </tr>
-          </thead>
+        <table>
+          <thead><tr><th>Nome</th><th>Email</th><th>Telefone</th><th>Status</th><th>Ações</th></tr></thead>
           <tbody>
             <?php foreach ($contacts as $c): ?>
               <tr>
                 <td><?=esc($c['name'])?></td>
-                <td><a href="mailto:<?=esc($c['email'])?>"><?=esc($c['email'])?></a></td>
+                <td><?=esc($c['email'])?></td>
                 <td><?=esc($c['phone'])?></td>
-                <td class="small"><?=nl2br(esc($c['notes']))?></td>
                 <td><?= $c['status'] ? 'Ativo' : 'Inativo' ?></td>
-                <td class="muted"><?=esc($c['created_at'])?></td>
-                <td class="actions">
-                  <!-- Edit (GET) -->
-                  <a class="small" href="index.php?action=edit&id=<?=intval($c['id'])?>" aria-label="Editar <?=esc($c['name'])?>">Editar</a>
+                <td>
+                  <a href="index.php?action=edit&id=<?=intval($c['id'])?>">Editar</a>
 
-                  <!-- Toggle status (POST form) -->
-                  <form method="post" action="index.php?action=toggle" style="display:inline" onsubmit="return confirm('Alterar status deste contato?')">
+                  <form method="post" action="index.php?action=toggle" style="display:inline">
                     <input type="hidden" name="csrf" value="<?=esc(csrf_token())?>">
                     <input type="hidden" name="id" value="<?=intval($c['id'])?>">
-                    <button class="small" type="submit"><?= $c['status'] ? 'Desativar' : 'Ativar' ?></button>
+                    <button type="submit"><?= $c['status'] ? 'Desativar' : 'Ativar' ?></button>
                   </form>
 
-                  <!-- Delete (POST form) -->
-                  <form method="post" action="index.php?action=delete" style="display:inline" onsubmit="return confirm('Excluir contato permanentemente?')">
+                  <form method="post" action="index.php?action=delete" style="display:inline" onsubmit="return confirm('Excluir?')">
                     <input type="hidden" name="csrf" value="<?=esc(csrf_token())?>">
                     <input type="hidden" name="id" value="<?=intval($c['id'])?>">
-                    <button class="small" type="submit" aria-label="Excluir <?=esc($c['name'])?>">Excluir</button>
+                    <button type="submit">Excluir</button>
                   </form>
                 </td>
               </tr>
-            <?php endforeach; ?>
+            <?php endforeach;?>
           </tbody>
         </table>
       <?php endif; ?>
-    </section>
+    </div>
 
-    <!-- Formulário de adicionar / editar -->
-    <aside class="card" aria-labelledby="formTitle">
-      <h2 id="formTitle"><?= $editing ? 'Editar contato' : 'Adicionar contato' ?></h2>
+    <aside style="width:380px" class="card">
+      <h2><?= $editing ? 'Editar contato' : 'Adicionar contato' ?></h2>
 
       <?php if ($editing): ?>
-        <form method="post" action="index.php?action=update" aria-describedby="formTitle">
+        <form method="post" action="index.php?action=update">
           <input type="hidden" name="csrf" value="<?=esc(csrf_token())?>">
           <input type="hidden" name="id" value="<?=intval($editing['id'])?>">
 
-          <label for="name">Nome <span aria-hidden="true">*</span></label>
-          <input id="name" name="name" required value="<?=esc($editing['name'])?>" aria-required="true">
+          <label>Nome</label>
+          <input name="name" required value="<?=esc($editing['name'])?>">
 
-          <label for="email">Email</label>
-          <input id="email" name="email" type="email" value="<?=esc($editing['email'])?>">
+          <label>Email</label>
+          <input name="email" type="email" value="<?=esc($editing['email'])?>">
 
-          <label for="phone">Telefone</label>
-          <input id="phone" name="phone" value="<?=esc($editing['phone'])?>">
+          <label>Telefone</label>
+          <input name="phone" value="<?=esc($editing['phone'])?>">
 
-          <label for="notes">Notas</label>
-          <textarea id="notes" name="notes"><?=esc($editing['notes'])?></textarea>
+          <label>Notas</label>
+          <textarea name="notes"><?=esc($editing['notes'])?></textarea>
 
-          <label for="status">Status</label>
-          <select id="status" name="status">
+          <label>Status</label>
+          <select name="status">
             <option value="1" <?=($editing['status'] ? 'selected' : '')?>>Ativo</option>
             <option value="0" <?=(!$editing['status'] ? 'selected' : '')?>>Inativo</option>
           </select>
 
           <div style="margin-top:10px">
-            <button class="btn-primary" type="submit">Salvar alterações</button>
-            <a class="btn-secondary" href="index.php">Cancelar</a>
+            <button type="submit">Salvar</button>
+            <a href="index.php">Cancelar</a>
           </div>
         </form>
 
       <?php else: ?>
-        <form method="post" action="index.php?action=add" aria-describedby="formTitle">
+        <form method="post" action="index.php?action=add" id="formAdd">
           <input type="hidden" name="csrf" value="<?=esc(csrf_token())?>">
 
-          <label for="name">Nome <span aria-hidden="true">*</span></label>
-          <input id="name" name="name" required aria-required="true">
+          <label>Nome</label>
+          <input id="name" name="name" required>
 
-          <label for="email">Email</label>
-          <input id="email" name="email" type="email">
+          <label>Email</label>
+          <input name="email" type="email">
 
-          <label for="phone">Telefone</label>
-          <input id="phone" name="phone">
+          <label>Telefone</label>
+          <input name="phone">
 
-          <label for="notes">Notas</label>
-          <textarea id="notes" name="notes"></textarea>
+          <label>Notas</label>
+          <textarea name="notes"></textarea>
 
-          <label for="status">Status</label>
-          <select id="status" name="status">
+          <label>Status</label>
+          <select name="status">
             <option value="1" selected>Ativo</option>
             <option value="0">Inativo</option>
           </select>
 
           <div style="margin-top:10px">
-            <button class="btn-primary" type="submit">Adicionar</button>
+            <button type="submit">Adicionar</button>
           </div>
         </form>
       <?php endif; ?>
-
     </aside>
   </div>
 
-  <footer style="margin-top:18px" class="muted small">
-    Dica: importe o arquivo <code>tabela.sql</code> no phpMyAdmin do InfinityFree e ajuste <code>config.php</code>.
-  </footer>
-
+  <p style="margin-top:18px" class="muted small">
+    Se quiser debug em JSON, acesse: <code>index.php?action=add&debug=1</code> (use com POST).
+  </p>
 </body>
 </html>
