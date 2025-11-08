@@ -33,4 +33,4 @@ jobs:
           DB_DATABASE: ":memory:"
 
       - name: Run PHPUnit tests
-        run: php artisan test --parallel
+        run: php artisan test 
