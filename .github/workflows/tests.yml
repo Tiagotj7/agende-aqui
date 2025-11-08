@@ -9,6 +9,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -16,21 +17,18 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.2'
-          extensions: mbstring, bcmath, sqlite3
-          tools: composer
+          php-version: '8.3'
+          extensions: mbstring, bcmath, intl, pdo_mysql
+          coverage: none
 
       - name: Install dependencies
-        run: composer install --no-interaction --prefer-dist
+        run: composer install --no-interaction --prefer-dist --no-progress
 
       - name: Prepare environment
-        run: |
-          cp .env.example .env
-          php artisan key:generate
-        env:
-          APP_ENV: testing
-          DB_CONNECTION: sqlite
-          DB_DATABASE: ":memory:"
+        run: cp .env.example .env
+
+      - name: Generate app key
+        run: php artisan key:generate
 
       - name: Run PHPUnit tests
-        run: php artisan test 
+        run: php artisan test --parallel
