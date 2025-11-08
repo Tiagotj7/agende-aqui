@@ -1,14 +1,16 @@
-# .github/workflows/linter.yml
 name: Linter / Quality
 
 on:
   push:
     branches:
       - main
+  pull_request:
 
 jobs:
   lint:
+    name: Run Laravel Pint
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -20,7 +22,7 @@ jobs:
           tools: composer
 
       - name: Install dependencies
-        run: composer install --no-interaction --prefer-dist
+        run: composer install --no-interaction --prefer-dist --no-scripts
 
       - name: Run Laravel Pint
         run: ./vendor/bin/pint --test
