@@ -8,9 +8,7 @@ on:
 
 jobs:
   test:
-    name: Run Laravel Tests
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -23,7 +21,7 @@ jobs:
           tools: composer
 
       - name: Install dependencies
-        run: composer install --no-interaction --prefer-dist --no-scripts
+        run: composer install --no-interaction --prefer-dist
 
       - name: Prepare environment
         run: |
@@ -34,5 +32,5 @@ jobs:
           DB_CONNECTION: sqlite
           DB_DATABASE: ":memory:"
 
-      - name: Run Tests
+      - name: Run PHPUnit tests
         run: php artisan test --parallel
